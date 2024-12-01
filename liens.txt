@@ -1,0 +1,21 @@
+
+
+Stockfish commands
+
+https://www.reddit.com/r/ComputerChess/comments/b6rdez/commandline_options_for_stockfish/
+
+
+
+
+Reconnaissance d'objet
+
+https://hmf.enseeiht.fr/travaux/projnum/book/export/html/3558
+
+
+	-> Pour reconnaise a1 et h8 et faire le calibrage automatiquement
+
+
+
+
+
+
