@@ -7,113 +7,15 @@ from selenium.webdriver.edge.options import Options
 import clipboard, time, pyautogui, random, keyboard, sys, winsound
 import msvcrt as m
 
-
-
-# Specify the path to the WebDriver executable
-edge_driver_path = "selenium_driver/msedgedriver.exe"
-
-# Set up the Edge options (optional)
-edge_options = Options()
-edge_options.add_argument("--start-maximized")  # Start browser maximized
-
-# Set up the WebDriver service
-service = Service(executable_path=edge_driver_path)
-
-# Create the WebDriver instance
-browser = webdriver.Edge(service=service, options=edge_options)
+from dotenv import load_dotenv
+import os
 
 
 
-stockfish = Stockfish(path="stockfish/stockfish_14.1_win_x64_avx2.exe")
-#stockfish.set_skill_level(1)
-#stockfish.set_elo_rating(500)
-#stockfish.set_depth(3)
-#print(stockfish.get_parameters())
-
-#browser = webdriver.Edge(executable_path="selenium_driver/msedgedriver.exe")
-browser.maximize_window()
-
-who_move  = ' w'
-who_turn = who_move
-castle = ' KQkq'
-castlew = True
-castleb = True
-move_count = 0
-wr = None
-br = None
-js = None
-
-
-
-highligh_js= """
-function getSquareFrom(e) {
-    return x = e.split("")[0], y = e.split("")[1], "a" == x ? x = 10 : "b" == x ? x = 20 : "c" == x ? x = 30 : "d" == x ? x = 40 : "e" == x ? x = 50 : "f" == x ? x = 60 : "g" == x ? x = 70 : "h" == x && (x = 80), parseInt(x) + parseInt(y)
-}
-
-function getSquareTo(e) {
-    return x = e.split("")[2], y = e.split("")[3], "a" == x ? x = 10 : "b" == x ? x = 20 : "c" == x ? x = 30 : "d" == x ? x = 40 : "e" == x ? x = 50 : "f" == x ? x = 60 : "g" == x ? x = 70 : "h" == x && (x = 80), parseInt(x) + parseInt(y)
-}
-
-function colorBestMove(e) {
-    var t = document.createElement("div");
-    t.id = "color_square", t.className = "highlight square-" + getSquareFrom(e), t.style = "background-color: rgb(0, 255, 255); opacity: 0.2", document.getElementsByClassName("board")[0].appendChild(t);
-    var o = document.createElement("div");
-    o.id = "color_square1", o.className = "highlight square-" + getSquareTo(e), o.style = "background-color: rgb(0, 255, 255); opacity: 0.2", document.getElementsByClassName("board")[0].appendChild(o)
-}
-
-function removeColorBestMove() {
-    a = document.getElementById("color_square"), b = document.getElementById("color_square1"), null != a && a.remove(), null != b && b.remove()
-}
-"""
-
-fen_js = """
-function findPiece(e) {
-    piece = null, n = document.getElementsByClassName("piece").length;
-    for (var o = 0; o <= n - 1; o++) name = document.getElementsByClassName("piece")[o].className.split(" ")[1], position = document.getElementsByClassName("piece")[o].className.split(" ")[2].split("-")[1], position == e && (piece = [name, position]);
-    return piece
-}
-fen = "", count = 0;
-for (var i = 8; i >= 1; i--) {
-    for (var j = 1; j <= 8; j++) pos = j.toString() + i.toString(), piece = findPiece(pos), piece ? (count > 0 && (fen += count, count = 0), color = piece[0].split("")[0], p = piece[0].split("")[1], "b" == color ? fen += p.toLowerCase() : "w" == color && (fen += p.toUpperCase())) : count++;
-    count > 0 && (fen += count, count = 0), fen += "/"
-}
-return fen
-"""
-
-find_and_click = """
-
-
-function find_and_click(tag_name, text, text2="text")
-{
-	playButton = ""
-	while(playButton == "")
-	{
-		for (i = 0; i < document.getElementsByTagName(tag_name).length; i++) { 
-			if (document.getElementsByTagName(tag_name)[i].innerText == text || document.getElementsByTagName(tag_name)[i].innerText == text2)
-			{
-				playButton = "1"
-				document.getElementsByTagName(tag_name)[i].click()
-			}
-		}
-	}
-}
-"""
-
-whos_turn = """
-if (document.getElementsByClassName('clock-player-turn')[0])
-{
-	clock = document.getElementsByClassName('clock-player-turn')[0]
-	if (clock.parentElement.parentElement.id == 'board-layout-player-bottom')
-	{
-		return ' w';
-	}
-	else
-	{
-		return ' b';
-	}	
-}
-"""
-
+def log(message):
+    print(message)
+    escaped_message = message.replace("'", "\\'").replace("\n", "\\n")
+    browser.execute_script(f"console.log('{escaped_message}');")
 
 def connect():
 	browser.get('https://www.chess.com/login_and_go')
@@ -125,7 +27,7 @@ def connect():
 		try:
 			login_input = browser.find_element("id", "username")
 		except:
-			print("Loading page ...")
+			log("Loading page ...")
 
 		time.sleep(1)
 
@@ -172,19 +74,20 @@ def new_game():
 
 
 
-
 def new_game_guest():
 	browser.get('https://www.chess.com/play/online')
-
 	#browser.get('https://www.chess.com/game/live/41221211291')
 
 
 	time.sleep(1)
 	if c == 0:
-		browser.execute_script(find_and_click + "find_and_click('button', 'Accepter tout')")
+		log("Accepting cookies ... (Skip)")
+		time.sleep(5)
+		browser.execute_script("document.getElementById('onetrust-accept-btn-handler').click();")
+		
 		calibrate()
 
-		time.sleep(10)
+		time.sleep(5)
 
 		#for i in range(10000):
 			#if keyboard.is_pressed('q'):
@@ -194,14 +97,17 @@ def new_game_guest():
 			#	input()
 		#	time.sleep(0.1)
 
+		log("Clicking on the time button ...")
 		browser.execute_script("document.getElementsByClassName('selector-button-button')[0].click()")
-		print(2)
+		
 		time.sleep(1)
 
+		log("Selecting 10 min ...")
 		browser.execute_script(find_and_click + "find_and_click('button', '10 min')")
 
 		time.sleep(1)
 
+		log("Clicking on the play button ...")
 		browser.execute_script(find_and_click + "find_and_click('button', 'Jouer', 'Play')")
 
 
@@ -209,9 +115,11 @@ def new_game_guest():
 
 
 	if c == 0 :
-		browser.execute_script(find_and_click + "find_and_click('a', 'Play as a Guest')")
+		log("Clicking on the play as a guest button ...")
+		browser.execute_script("document.getElementById('guest-button').click()")
 
 	if c == 0:
+		log("Setting up the board ...")
 		browser.execute_script("document.getElementById('board-controls-settings').click();")
 		time.sleep(2)
 		browser.execute_script("document.getElementsByClassName('tabs-tab')[4].click();")
@@ -247,18 +155,19 @@ def new_game_manual(who_move):
 
 
 def calibrate():
+	log("\nCalibrating ...")
 	global wr, br
 
 	while wr == None or br == None:
 		wr = pyautogui.locateCenterOnScreen('calibration_images/wr.png', confidence=0.4)
 		br = pyautogui.locateCenterOnScreen('calibration_images/br.png', confidence=0.4)
 		if wr != None:
-			print('Ok')
+			log("\nWhite rook found !!!")
 			pyautogui.moveTo(wr[0], wr[1])
 
 		time.sleep(2)
 		if br != None:
-			print('Ok1')
+			log("\nBlack rook found !!!")
 			pyautogui.moveTo(br[0], br[1])
 		time.sleep(0.5)
 	winsound.Beep(2500, 200)
@@ -285,6 +194,7 @@ def check_castle(castle, castlew, castleb):
 
 
 def move_mouse(bm, a1, h8, x_space, y_space):
+	log("\nMoving mouse ...")
 	x = ((ord(bm[0]) - 97)*x_space+a1[0])
 	y = (a1[1]-((int(bm[1])-1)*y_space))
 	x1 = ((ord(bm[2]) - 97)*x_space+a1[0])
@@ -304,6 +214,7 @@ def move_mouse(bm, a1, h8, x_space, y_space):
 	else:
 		time.sleep(random.uniform(0.1, 0.2))
 
+	log("Moving mouse to " + str(x) + " ,"  + str(y) + "; " + str(x1) + " ,"  + str(y1))
 	pyautogui.moveTo(int(x), int(y))
 	
 	pyautogui.mouseDown();
@@ -316,6 +227,7 @@ def move_mouse(bm, a1, h8, x_space, y_space):
 	
 
 def highlight_move(bm, fenjs):
+	log("\nHighlighting move ...")
 	highlight = highligh_js + "removeColorBestMove();colorBestMove(\"" + bm + "\")"
 	browser.execute_script(highlight)
 	while fenjs == browser.execute_script(fen_js)[:-1]:
@@ -327,11 +239,119 @@ def wait():
 
 #connect()
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Get variables
+edge_driver_path = os.getenv("EDGE_DRIVER_PATH")
+stockfish_path = os.getenv("STOCKFISH_PATH")
+
+# Set up the Edge options (optional)
+edge_options = Options()
+edge_options.add_argument("--start-maximized")  # Start browser maximized
+# open f12
+edge_options.add_argument("--auto-open-devtools-for-tabs")  # Open DevTools
+
+# Set up the WebDriver service
+service = Service(executable_path=edge_driver_path)
+
+# Create the WebDriver instance
+browser = webdriver.Edge(service=service, options=edge_options)
+#browser.maximize_window()
+
+stockfish = Stockfish(path=stockfish_path)
+#stockfish.set_skill_level(1)
+#stockfish.set_elo_rating(500)
+#stockfish.set_depth(3)
+#log("Stockfish parameters:\n")
+#log(stockfish.get_parameters())
+
+who_move  = ' w'
+who_turn = who_move
+castle = ' KQkq'
+castlew = True
+castleb = True
+move_count = 0
+wr = None
+br = None
+js = None
+
+log("\nDefining JS functions ...")
+
+highligh_js= """
+function getSquareFrom(e) {
+    return x = e.split("")[0], y = e.split("")[1], "a" == x ? x = 10 : "b" == x ? x = 20 : "c" == x ? x = 30 : "d" == x ? x = 40 : "e" == x ? x = 50 : "f" == x ? x = 60 : "g" == x ? x = 70 : "h" == x && (x = 80), parseInt(x) + parseInt(y)
+}
+
+function getSquareTo(e) {
+    return x = e.split("")[2], y = e.split("")[3], "a" == x ? x = 10 : "b" == x ? x = 20 : "c" == x ? x = 30 : "d" == x ? x = 40 : "e" == x ? x = 50 : "f" == x ? x = 60 : "g" == x ? x = 70 : "h" == x && (x = 80), parseInt(x) + parseInt(y)
+}
+
+function colorBestMove(e) {
+    var t = document.createElement("div");
+    t.id = "color_square", t.className = "highlight square-" + getSquareFrom(e), t.style = "background-color: rgb(0, 255, 255); opacity: 0.2", document.getElementsByClassName("board")[0].appendChild(t);
+    var o = document.createElement("div");
+    o.id = "color_square1", o.className = "highlight square-" + getSquareTo(e), o.style = "background-color: rgb(0, 255, 255); opacity: 0.2", document.getElementsByClassName("board")[0].appendChild(o)
+}
+
+function removeColorBestMove() {
+    a = document.getElementById("color_square"), b = document.getElementById("color_square1"), null != a && a.remove(), null != b && b.remove()
+}
+"""
+
+fen_js = """
+function findPiece(e) {
+    piece = null, n = document.getElementsByClassName("piece").length;
+    for (var o = 0; o <= n - 1; o++) name = document.getElementsByClassName("piece")[o].className.split(" ")[1], position = document.getElementsByClassName("piece")[o].className.split(" ")[2].split("-")[1], position == e && (piece = [name, position]);
+    return piece
+}
+fen = "", count = 0;
+for (var i = 8; i >= 1; i--) {
+    for (var j = 1; j <= 8; j++) pos = j.toString() + i.toString(), piece = findPiece(pos), piece ? (count > 0 && (fen += count, count = 0), color = piece[0].split("")[0], p = piece[0].split("")[1], "b" == color ? fen += p.toLowerCase() : "w" == color && (fen += p.toUpperCase())) : count++;
+    count > 0 && (fen += count, count = 0), fen += "/"
+}
+return fen
+"""
+
+find_and_click = """
+function find_and_click(tag_name, text, text2="text")
+{
+	playButton = ""
+	while(playButton == "")
+	{
+		for (i = 0; i < document.getElementsByTagName(tag_name).length; i++) { 
+			if (document.getElementsByTagName(tag_name)[i].innerText == text || document.getElementsByTagName(tag_name)[i].innerText == text2)
+			{
+				playButton = "1"
+				document.getElementsByTagName(tag_name)[i].click()
+			}
+		}
+	}
+}
+"""
+
+whos_turn = """
+if (document.getElementsByClassName('clock-player-turn')[0])
+{
+	clock = document.getElementsByClassName('clock-player-turn')[0]
+	if (clock.parentElement.parentElement.id == 'board-layout-player-bottom')
+	{
+		return ' w';
+	}
+	else
+	{
+		return ' b';
+	}	
+}
+"""
+
 c = 0
 
 while True:
 	#new_game()
+	log("\nStarting new game ...")
 	new_game_guest()
+	log("\nNew game started ...")
 	if c == 0:
 		c = 1
 
@@ -362,12 +382,14 @@ while True:
 		#print ("Current position: " + str(mouse.position))
 		if browser.execute_script("if (document.getElementsByClassName('clock-player-turn')[0]) return 1") == 1:
 			if keyboard.is_pressed('q'):
-				print('Pause')
+				log("Game paused ...")
 				input()
 
 			if (flipped == 0):
 				who_move  = ' w'
 				if browser.execute_script("return document.getElementsByClassName('flipped').length") == 1:
+					log("Flipping board ...")
+					time.sleep(5)
 					browser.execute_script("return document.getElementById('board-controls-flip').click()")
 					who_move  = ' b'
 				flipped = 1
@@ -376,6 +398,7 @@ while True:
 
 			who_turn = browser.execute_script(whos_turn)
 			if who_move == who_turn:
+				log("\nMy turn ...")
 				move_count += 1
 
 				fenjs = browser.execute_script(fen_js)[:-1]

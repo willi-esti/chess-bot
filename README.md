@@ -22,7 +22,7 @@ This project is a chess bot that plays chess on [chess.com](https://www.chess.co
 
 2. Install the required Python packages:
     ```sh
-    pip install selenium pyautogui keyboard winsound clipboard
+    pip install selenium pyautogui keyboard clipboard python-dotenv
     ```
 
 3. Download the Edge WebDriver and place it in the `selenium_driver` directory:
