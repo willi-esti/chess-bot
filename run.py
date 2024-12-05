@@ -19,6 +19,7 @@ def log(message):
 
 def connect():
 	browser.get('https://www.chess.com/login_and_go')
+	browser.execute_script(debug)
 
 	login_input=False
 	login_input = browser.find_element("id", "username")
@@ -43,7 +44,7 @@ def connect():
 	#browser.execute_script("document.getElementsByClassName('ui_outside-close-component')[0].click()")
 
 	browser.get('https://www.chess.com/play/online')
-
+	browser.execute_script(debug)
 
 	calibrate()
 
@@ -55,6 +56,7 @@ def new_game():
 	time.sleep(5)
 	if browser.execute_script("if (document.getElementsByClassName('notification-toaster-link').length >= 2) {document.getElementsByClassName('notification-toaster-link')[1].click(); return 1}") != 1:
 		browser.get('https://www.chess.com/play/online')
+		browser.execute_script(debug)
 
 		print(1)
 		browser.execute_script("document.getElementsByClassName('selector-button-button')[0].click()")
@@ -76,18 +78,18 @@ def new_game():
 
 def new_game_guest():
 	browser.get('https://www.chess.com/play/online')
+	browser.execute_script(debug)
 	#browser.get('https://www.chess.com/game/live/41221211291')
 
 
 	time.sleep(1)
-	if c == 0:
+	if is_first_browser_load == 0:
 		log("Accepting cookies ... (Skip)")
 		time.sleep(5)
 		browser.execute_script("document.getElementById('onetrust-accept-btn-handler').click();")
 		
-		calibrate()
 
-		time.sleep(5)
+		time.sleep(2)
 
 		#for i in range(10000):
 			#if keyboard.is_pressed('q'):
@@ -113,12 +115,9 @@ def new_game_guest():
 
 		time.sleep(1)
 
-
-	if c == 0 :
 		log("Clicking on the play as a guest button ...")
 		browser.execute_script("document.getElementById('guest-button').click()")
 
-	if c == 0:
 		log("Setting up the board ...")
 		browser.execute_script("document.getElementById('board-controls-settings').click();")
 		time.sleep(2)
@@ -156,24 +155,15 @@ def new_game_manual(who_move):
 
 def calibrate():
 	log("\nCalibrating ...")
-	global wr, br
-
-	while wr == None or br == None:
-		wr = pyautogui.locateCenterOnScreen('calibration_images/wr.png', confidence=0.4)
-		br = pyautogui.locateCenterOnScreen('calibration_images/br.png', confidence=0.4)
-		if wr != None:
-			log("\nWhite rook found !!!")
-			pyautogui.moveTo(wr[0], wr[1])
-
-		time.sleep(2)
-		if br != None:
-			log("\nBlack rook found !!!")
-			pyautogui.moveTo(br[0], br[1])
-		time.sleep(0.5)
+	global white_rook, black_rook
+	white_rook = browser.execute_script(get_element_position + "return getElementPosition(document.getElementsByClassName('square-11')[0]);")
+	log("\nWhite rook position : " + str(white_rook))
+	black_rook = browser.execute_script(get_element_position + "return getElementPosition(document.getElementsByClassName('square-88')[0]);")
+	log("\nBlack rook position : " + str(black_rook))
 	winsound.Beep(2500, 200)
 
 
-#print(wr, br)
+#print(white_rook, black_rook)
 # w Point(x=373, y=232) Point(x=1420, y=341)
 # b Point(x=410, y=1344) Point(x=1420, y=341)
 
@@ -193,44 +183,17 @@ def check_castle(castle, castlew, castleb):
 	return castle, castlew, castleb
 
 
-def move_mouse(bm, a1, h8, x_space, y_space):
+def move_mouse(stockfish_best_move, a1, h8, space_between_squares):
 	log("\nMoving mouse ...")
-	x = ((ord(bm[0]) - 97)*x_space+a1[0])
-	y = (a1[1]-((int(bm[1])-1)*y_space))
-	x1 = ((ord(bm[2]) - 97)*x_space+a1[0])
-	y1 = (a1[1]-((int(bm[3])-1)*y_space))
-	#print("Pos : " + str(x) + " ,"  + str(y) + "; " + str(x1) + " ,"  + str(y1))
-
-	if move_count < 5:
-		time.sleep(random.uniform(0.1, 0.3))
-	elif move_count < 15 and move_count > 5:
-		time.sleep(random.uniform(0.1, 4))
-	elif move_count < 20 and move_count > 15:
-		time.sleep(random.uniform(0.1, 2))
-	elif move_count < 25 and move_count > 20:
-		time.sleep(random.uniform(0.1, 1))
-	elif move_count < 40 and move_count > 25:
-		time.sleep(random.uniform(0.1, 0.5))
-	else:
-		time.sleep(random.uniform(0.1, 0.2))
-
-	log("Moving mouse to " + str(x) + " ,"  + str(y) + "; " + str(x1) + " ,"  + str(y1))
-	pyautogui.moveTo(int(x), int(y))
-	
-	pyautogui.mouseDown();
-	time.sleep(0.01)
-
-	pyautogui.moveTo(int(x1), int(y1))
-
-	time.sleep(0.01)
-	pyautogui.mouseUp()
+	log("\nGetting position ...")
+	browser.execute_script("game.move('" + stockfish_best_move + "')")
 	
 
-def highlight_move(bm, fenjs):
+def highlight_move(stockfish_best_move, fenjs):
 	log("\nHighlighting move ...")
-	highlight = highligh_js + "removeColorBestMove();colorBestMove(\"" + bm + "\")"
+	highlight = highligh_js + "removeColorBestMove();colorBestMove(\"" + stockfish_best_move + "\")"
 	browser.execute_script(highlight)
-	while fenjs == browser.execute_script(fen_js)[:-1]:
+	while fenjs == browser.execute_script(fen_js):
 		time.sleep(0.5)
 
 def wait():
@@ -272,11 +235,86 @@ castle = ' KQkq'
 castlew = True
 castleb = True
 move_count = 0
-wr = None
-br = None
+white_rook = None
+black_rook = None
 js = None
 
 log("\nDefining JS functions ...")
+
+debug = """
+// Create a div to display the mouse position
+const positionDiv = document.createElement('div');
+positionDiv.style.position = 'fixed';
+positionDiv.style.top = '0';
+positionDiv.style.left = '0';
+positionDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+positionDiv.style.color = 'white';
+positionDiv.style.padding = '5px 10px';
+positionDiv.style.zIndex = '1000';
+positionDiv.style.fontFamily = 'Arial, sans-serif';
+positionDiv.style.fontSize = '14px';
+document.body.appendChild(positionDiv);
+
+// Update the div with the mouse position
+document.addEventListener('mousemove', (event) => {
+    positionDiv.textContent = `Mouse X: ${event.pageX}, Mouse Y: ${event.pageY}`;
+});
+"""
+
+create_squares = """
+function create_piece(square_num)
+{
+    // Select the target container by ID
+    const boardSingle = document.getKElementsByClassName('board')[0];
+    
+    // Check if the container exists
+    if (boardSingle) {
+        // Create a new div element
+        const pieceDiv = document.createElement('div');
+
+        // Add the desired classes to the new div
+        pieceDiv.className = 'piece square-' + square_num;
+
+        // Add inline styles (if any)
+        pieceDiv.style.cssText = ''; // No styles provided, this is an empty style
+
+        // Append the new div to the target container
+        boardSingle.appendChild(pieceDiv);
+
+        console.log('Piece created and added to #board-single:', pieceDiv);
+    } else {
+        console.error('Element with ID "board-single" not found.');
+    }
+
+}
+
+
+create_piece('84')
+for (let i = 1; i <= 8; i++) {
+    for (let j = 1; j <= 8; j++) {
+        create_piece(i + '' + j)
+    }
+}
+"""
+
+
+get_element_position = """
+function getElementPosition(element) {
+    if (element) {
+        const rect = element.getBoundingClientRect();
+        console.log('X:', rect.x);
+        console.log('Y:', rect.y);
+		console.log('Bottom:', rect.bottom);
+		console.log('Right:', rect.right);
+        return { x: rect.x, y: rect.y };
+    } else {
+        console.log('Element not found');
+		return null;
+    }
+}
+// Usage example:
+// getElementPosition(document.getElementsByClassName('square-18')[0]);
+"""
 
 highligh_js= """
 function getSquareFrom(e) {
@@ -300,17 +338,9 @@ function removeColorBestMove() {
 """
 
 fen_js = """
-function findPiece(e) {
-    piece = null, n = document.getElementsByClassName("piece").length;
-    for (var o = 0; o <= n - 1; o++) name = document.getElementsByClassName("piece")[o].className.split(" ")[1], position = document.getElementsByClassName("piece")[o].className.split(" ")[2].split("-")[1], position == e && (piece = [name, position]);
-    return piece
+if (typeof game !== 'undefined' && game !== null) {
+    game.getFEN()
 }
-fen = "", count = 0;
-for (var i = 8; i >= 1; i--) {
-    for (var j = 1; j <= 8; j++) pos = j.toString() + i.toString(), piece = findPiece(pos), piece ? (count > 0 && (fen += count, count = 0), color = piece[0].split("")[0], p = piece[0].split("")[1], "b" == color ? fen += p.toLowerCase() : "w" == color && (fen += p.toUpperCase())) : count++;
-    count > 0 && (fen += count, count = 0), fen += "/"
-}
-return fen
 """
 
 find_and_click = """
@@ -345,37 +375,22 @@ if (document.getElementsByClassName('clock-player-turn')[0])
 }
 """
 
-c = 0
+log("\nRunning debug script ...")
+is_first_browser_load = False
 
 while True:
 	#new_game()
 	log("\nStarting new game ...")
 	new_game_guest()
 	log("\nNew game started ...")
-	if c == 0:
-		c = 1
-
+	if is_first_browser_load == 0:
+		is_first_browser_load = 1
+	calibrate()
 
 	move_count = 0
 
-	"""
-	print("a1")
-	_ = input()
-	a1 = mouse.position
-	print("h8")
-	_ = input()
-	h8 = mouse.position
-	"""
-	a1 = wr
-	h8 = br
-	#print(a1, h8)
-	x_space = abs(h8[0] - a1[0])/7
-	y_space = abs(a1[1] - h8[1])/7
+	log("\nResetting variables fen and flipped ...")
 	old_fen=None
-	#game-over-modal-content
-
-	print("lol")
-
 	flipped = 0
 
 	while browser.execute_script("return document.getElementsByClassName('game-over-modal-content').length") != 1:
@@ -394,35 +409,39 @@ while True:
 					who_move  = ' b'
 				flipped = 1
 
-
-
 			who_turn = browser.execute_script(whos_turn)
 			if who_move == who_turn:
 				log("\nMy turn ...")
 				move_count += 1
+				print(fen_js)
+				fenjs = browser.execute_script(fen_js)
 
-				fenjs = browser.execute_script(fen_js)[:-1]
+				#castle, castlew, castleb = check_castle(castle, castlew, castleb)
 
-				castle, castlew, castleb = check_castle(castle, castlew, castleb)
+				fen = fenjs
+				# TypeError: can only concatenate str (not "NoneType") to str
+				log("\nFEN: " + str(fen))
+				#log("\nFEN: " + fen)
+				
+				# To prevent crashing the browser when stockfish crashes
+				try:
+					stockfish.set_fen_position(fen)
+					stockfish_best_move = stockfish.get_best_move()
+				except:
+					log("\nStockfish crashed ...")
+					#break
+				
+				log("\nStockfish best move: " + stockfish_best_move)
 
-				fen = fenjs + who_move + castle + " -" + " - " + str(move_count)
-
-				print("\n", fen, end="")
-
-
-				stockfish.set_fen_position(fen)
-				bm = stockfish.get_best_move()
-				print(bm)
-
-				if bm == None:
+				if stockfish_best_move == None:
 					break
 
-				move_mouse(bm, a1, h8, x_space, y_space)
-				highlight_move(bm, fenjs)
+				move_mouse(stockfish_best_move)
+				highlight_move(stockfish_best_move, fenjs)
 
 				#mouse.move(0,0)
 				clipboard.copy("")
-				fen = fenjs + who_move + castle + " -" + " - " + str(move_count)
+				fen = fenjs
 
 				old_fen = fen
 				print(".", end="")
